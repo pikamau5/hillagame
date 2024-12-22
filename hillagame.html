@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Offline Runner Clone</title>
+  <style>
+    /* Basic reset and centering */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #fafafa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+
+    .game-container {
+      position: relative;
+      overflow: hidden;
+      width: 600px;
+      height: 200px;
+      background: #fff;
+      border: 2px solid #ccc;
+    }
+
+    /* Player (now with an image) */
+    .player {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      bottom: 0;  /* start at the bottom */
+      left: 50px; /* position from the left */
+      background-image: url('hilla.png'); /* Replace with your player image */
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+
+    /* Obstacles (now with an image) */
+    .obstacle {
+      position: absolute;
+      bottom: 0;
+      width: 40px;
+      height: 40px;
+      background-image: url('obstacle.png'); /* Replace with your obstacle image */
+      background-size: contain;
+      background-repeat: no-repeat;
+      left: 600px; /* start off-screen to the right */
+    }
+
+    /* Score display */
+    .score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container" id="game">
+    <div class="player" id="player"></div>
+    <div class="score" id="score">Score: 0</div>
+  </div>
+
+  <script>
+  const player = document.getElementById('player');
+  const gameContainer = document.getElementById('game');
+  const scoreDisplay = document.getElementById('score');
+
+  let isJumping = false;
+  let jumpHeight = 100; // how high the player jumps
+  let gravity = 2;     // rate at which the player falls
+  let score = 0;
+  let gameOver = false;
+
+  let playerSize = 40; // Initial size of the player
+  let rotationAngle = 0; // Initial rotation angle
+
+  // Function to handle the jump
+  function jump() {
+    if (isJumping) return; // Prevent double-jump
+
+    isJumping = true;
+    let upInterval = setInterval(() => {
+      let playerBottom = parseInt(window.getComputedStyle(player).bottom);
+      if (playerBottom >= jumpHeight) {
+        clearInterval(upInterval);
+        let downInterval = setInterval(() => {
+          playerBottom = parseInt(window.getComputedStyle(player).bottom);
+          if (playerBottom <= 0) {
+            clearInterval(downInterval);
+            isJumping = false;
+            player.style.transform = 'rotate(0deg)'; // Reset rotation when back on the ground
+          } else {
+            player.style.bottom = (playerBottom - 5) + 'px';
+            rotationAngle += 10; // Increment rotation angle while falling
+            player.style.transform = `rotate(${rotationAngle}deg)`;
+          }
+        }, 20);
+      } else {
+        player.style.bottom = (playerBottom + 5) + 'px';
+        rotationAngle += 10; // Increment rotation angle while rising
+        player.style.transform = `rotate(${rotationAngle}deg)`;
+      }
+    }, 20);
+  }
+
+  // Function to create obstacles
+  function createObstacle() {
+    if (gameOver) return;
+
+    const obstacle = document.createElement('div');
+    obstacle.classList.add('obstacle');
+    gameContainer.appendChild(obstacle);
+
+    let obstacleLeft = gameContainer.offsetWidth;
+    let moveObstacle = setInterval(() => {
+      if (gameOver) {
+        clearInterval(moveObstacle);
+        return;
+      }
+
+      obstacleLeft -= 5;
+      obstacle.style.left = obstacleLeft + 'px';
+
+      // Remove obstacle if it goes off to the left
+      if (obstacleLeft < -50) {
+        clearInterval(moveObstacle);
+        gameContainer.removeChild(obstacle);
+        score++;
+        scoreDisplay.innerText = 'Score: ' + score;
+
+        // Increase player size
+        playerSize += 10; // Increase size slightly
+        player.style.width = playerSize + 'px';
+        player.style.height = playerSize + 'px';
+      }
+
+      // Check collision
+      let playerBottom = parseInt(window.getComputedStyle(player).bottom);
+      let playerLeft = parseInt(window.getComputedStyle(player).left);
+      let playerWidth = parseInt(window.getComputedStyle(player).width);
+      let obstacleWidth = parseInt(window.getComputedStyle(obstacle).width);
+
+      // If obstacle is within the player’s horizontal range
+      if (
+        obstacleLeft < (playerLeft + playerWidth) &&
+        obstacleLeft + obstacleWidth > playerLeft &&
+        playerBottom < 40  // height of obstacle
+      ) {
+        // Collision detected => Game Over
+        clearInterval(moveObstacle);
+        gameOver = true;
+        obstacle.style.background = 'red';
+        alert('Game Over!\nYour score: ' + score);
+      }
+    }, 20);
+
+    // Create next obstacle at random intervals (1 to 3 seconds)
+    let randomTime = Math.random() * 2000 + 1000;
+    setTimeout(createObstacle, randomTime);
+  }
+
+  // Start the game by creating the first obstacle
+  createObstacle();
+
+  // Listen for keypress to jump (Space or Arrow Up)
+  document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+      jump();
+    }
+  });
+</script>
+
+</body>
+</html>
